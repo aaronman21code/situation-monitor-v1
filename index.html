@@ -46,28 +46,46 @@
     .card-lg { border-radius: 20px; }
 
     /* ── Tabs ── */
+    .tab-bar {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 4px;
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
     .tab-btn {
       position: relative;
-      padding: 10px 20px;
+      padding: 8px 18px;
       font-size: 0.8125rem;
       font-weight: 500;
       color: #71717a;
       cursor: pointer;
-      transition: color 0.2s;
+      transition: color 0.18s, background 0.18s;
       white-space: nowrap;
       border: none;
       background: none;
       outline: none;
+      border-radius: 10px;
+      flex-shrink: 0;
     }
-    .tab-btn:hover { color: #d4d4d8; }
-    .tab-btn.active { color: #f4f4f5; }
+    .tab-btn:hover { color: #d4d4d8; background: rgba(255,255,255,0.05); }
+    .tab-btn.active {
+      color: #f4f4f5;
+      background: rgba(255,255,255,0.09);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07);
+    }
     .tab-btn.active::after {
       content: '';
       position: absolute;
-      bottom: -1px; left: 20%; right: 20%;
+      bottom: 4px; left: 25%; right: 25%;
       height: 2px;
       border-radius: 9999px;
       background: linear-gradient(90deg, var(--amber), var(--red));
+      opacity: 0.8;
     }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
@@ -150,7 +168,7 @@
       .header-nums > div .text-2xl { font-size: 1.25rem !important; }
 
       /* Tabs: tighter padding so all 4 fit on one line */
-      .tab-btn { padding: 8px 12px; font-size: 0.72rem; }
+      .tab-btn { padding: 7px 10px; font-size: 0.7rem; }
 
       /* Metric cards: tighter padding + smaller numbers */
       .metric-card { padding: 12px !important; }
@@ -229,7 +247,7 @@
   </header>
 
   <!-- ══════════════ TABS ══════════════ -->
-  <div class="border-b border-white/[0.08] flex gap-1 mb-5 overflow-x-auto">
+  <div class="tab-bar mb-5">
     <button class="tab-btn active" data-tab="overview">Overview</button>
     <button class="tab-btn" data-tab="countries">Countries</button>
     <button class="tab-btn" data-tab="scenarios">Scenarios</button>
