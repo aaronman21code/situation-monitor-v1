@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hormuz Strait Crisis — Situation Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.08);
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --purple: #a855f7;
+      --emerald: #10b981;
+      --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: #e4e4e7;
+      overflow-x: hidden;
+    }
+
+    /* ── Subtle noise texture ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* ── Glass cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+    }
+    .card-lg { border-radius: 20px; }
+
+    /* ── Tabs ── */
+    .tab-btn {
+      position: relative;
+      padding: 10px 20px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #71717a;
+      cursor: pointer;
+      transition: color 0.2s;
+      white-space: nowrap;
+      border: none;
+      background: none;
+      outline: none;
+    }
+    .tab-btn:hover { color: #d4d4d8; }
+    .tab-btn.active { color: #f4f4f5; }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 20%; right: 20%;
+      height: 2px;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, var(--amber), var(--red));
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Count-up ── */
+    .count-up { transition: all 0.05s; }
+
+    /* ── Bar fill animation ── */
+    .bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      width: 0;
+      transition: width 1s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* ── Crisis index color ── */
+    .idx-crit { color: #f87171; }
+    .idx-high  { color: #fb923c; }
+    .idx-mid   { color: #fbbf24; }
+    .idx-low   { color: #34d399; }
+
+    /* ── Pulse dot ── */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .pulse-dot { animation: pulse 1.8s ease-in-out infinite; }
+
+    /* ── Timeline ── */
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 6px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--amber);
+      flex-shrink: 0;
+    }
+
+    /* ── SVG arc ── */
+    .arc-track { fill: none; stroke: rgba(255,255,255,0.06); }
+    .arc-fill  { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1.4s cubic-bezier(0.25,1,0.5,1); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+
+    /* ── Tab content height ── */
+    .tab-content-area {
+      height: calc(100vh - 148px);
+      overflow-y: auto;
+    }
+    @media (max-width: 768px) {
+      .tab-content-area { height: auto; overflow-y: visible; }
+    }
+
+    /* ── Sortable headers ── */
+    .sort-th {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .sort-th:hover { color: #d4d4d8; }
+    .sort-th .sort-icon { display: inline-block; margin-left: 4px; opacity: 0.35; font-size: 10px; }
+    .sort-th.asc  .sort-icon { opacity: 1; }
+    .sort-th.desc .sort-icon { opacity: 1; }
+
+    /* ── Mobile responsive tweaks ── */
+    @media (max-width: 640px) {
+      .header-nums  { flex-direction: row; gap: 20px; }
+      /* Keep table scrollable on mobile */
+      .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+      /* Tighten table padding on mobile */
+      .sort-th, td { padding-left: 8px !important; padding-right: 8px !important; }
+    }
+    @media (max-width: 768px) {
+      /* Proxies arc cards stack better */
+      #proxy-arcs .card { flex-direction: column; align-items: center; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="relative z-10 max-w-screen-2xl mx-auto px-6 py-5">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+    <div>
+      <div class="flex flex-wrap items-center gap-2 mb-1">
+        <div class="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-red-950/60 border border-red-500/25 text-red-300">
+          <span class="pulse-dot w-2 h-2 bg-red-400 rounded-full inline-block"></span>
+          CRISIS ACTIVE — 95% Traffic Blocked
+        </div>
+        <span class="text-xs text-zinc-500">March 27, 2026</span>
+      </div>
+      <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight text-zinc-50 leading-none">
+        Hormuz Strait &nbsp;<span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-500">Situation Monitor</span>
+      </h1>
+      <p class="text-xs text-zinc-500 mt-1">Live mathematical model — Monte Carlo simulation (1,000 runs)</p>
+    </div>
+    <div class="header-nums flex items-center gap-6 shrink-0">
+      <div class="text-right">
+        <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">Brent Crude</div>
+        <div class="text-2xl sm:text-3xl font-mono font-bold text-amber-400">$<span id="hdr-oil">118.40</span></div>
+        <div class="text-xs text-red-400 font-medium">↑ +51.8% pre-crisis</div>
+      </div>
+      <div class="text-right">
+        <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">Crisis Index</div>
+        <div class="text-2xl sm:text-3xl font-mono font-bold text-red-400"><span id="hdr-idx">4.12</span><span class="text-base text-zinc-500">/5</span></div>
+        <div class="text-xs text-orange-400 font-medium">↑ +0.68 projected</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════ TABS ══════════════ -->
+  <div class="border-b border-white/[0.08] flex gap-1 mb-5 overflow-x-auto">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="countries">Countries</button>
+    <button class="tab-btn" data-tab="scenarios">Scenarios</button>
+    <button class="tab-btn" data-tab="proxies">Proxies &amp; Network</button>
+  </div>
+
+  <!-- ══════════════ TAB: OVERVIEW ══════════════ -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="tab-content-area pr-1">
+
+      <!-- Key metrics -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5 pb-1">
+        <div class="card p-4">
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Avg Crisis Index</div>
+          <div class="text-4xl font-mono font-bold text-red-400"><span class="count-up" data-target="4.12" data-decimals="2">0.00</span></div>
+          <div class="text-xs text-orange-400 mt-2">↑ +0.68 projected</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Gulf Exporters</div>
+          <div class="text-4xl font-mono font-bold text-orange-400"><span class="count-up" data-target="6" data-decimals="0">0</span></div>
+          <div class="text-xs text-red-400 mt-2">All at existential risk</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Asian Importers</div>
+          <div class="text-4xl font-mono font-bold text-amber-400"><span class="count-up" data-target="7" data-decimals="0">0</span></div>
+          <div class="text-xs text-yellow-400 mt-2">Reserves depleting</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Proxy Activation</div>
+          <div class="text-4xl font-mono font-bold text-purple-400"><span class="count-up" data-target="58" data-decimals="0">0</span>%</div>
+          <div class="text-xs text-purple-400 mt-2">Iraqi Militias leading</div>
+        </div>
+        <div class="card p-4">
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Escalation Risk 1–3mo</div>
+          <div class="text-4xl font-mono font-bold text-red-500"><span class="count-up" data-target="47" data-decimals="0">0</span>%</div>
+          <div class="text-xs text-red-400 mt-2">Major escalation likely</div>
+        </div>
+      </div>
+
+      <!-- Oil chart + Timeline -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <!-- Oil chart -->
+        <div class="lg:col-span-3 card card-lg p-5 min-w-0">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-semibold text-zinc-100">Oil Price Trajectory</h2>
+              <p class="text-xs text-zinc-500 mt-0.5">Brent crude — pre-crisis baseline through 3-month projection</p>
+            </div>
+            <div class="flex gap-3 text-xs">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-amber-400 inline-block"></span>Actual</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-red-400 inline-block rounded border-dashed" style="border-top:1.5px dashed #f87171;background:none"></span>Projected</span>
+            </div>
+          </div>
+          <div style="height: 260px; position: relative;">
+            <canvas id="oil-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="lg:col-span-2 card card-lg p-5 flex flex-col">
+          <h2 class="font-semibold text-zinc-100 mb-4">Crisis Timeline</h2>
+          <div class="flex-1 overflow-y-auto space-y-4 pr-1" style="max-height: 306px;" id="timeline-feed"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB: COUNTRIES ══════════════ -->
+  <div class="tab-panel" id="tab-countries">
+    <div class="tab-content-area pr-1">
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+
+        <!-- Table -->
+        <div class="xl:col-span-8 card card-lg overflow-hidden">
+          <div class="px-5 py-4 border-b border-white/[0.07] flex items-center justify-between">
+            <h2 class="font-semibold text-zinc-100">Country Impact Dashboard</h2>
+            <select id="group-filter" class="text-xs bg-zinc-900 border border-white/[0.1] rounded-xl px-3 py-1.5 text-zinc-300 focus:outline-none focus:border-amber-500/50">
+              <option value="all">All Countries</option>
+              <option value="gulf">Gulf Exporters</option>
+              <option value="asia">Asian Importers</option>
+            </select>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="bg-zinc-950/70">
+                  <th class="sort-th text-left py-3 px-5 font-medium text-zinc-400" data-key="name" data-type="str">Country <span class="sort-icon">↕</span></th>
+                  <th class="sort-th text-center py-3 px-3 font-medium text-zinc-400" data-key="dep" data-type="num">Dependence <span class="sort-icon">↕</span></th>
+                  <th class="sort-th text-center py-3 px-3 font-medium text-zinc-400" data-key="sev" data-type="num">Severity <span class="sort-icon">↕</span></th>
+                  <th class="sort-th text-center py-3 px-3 font-medium text-zinc-400" data-key="res" data-type="num">Resilience <span class="sort-icon">↕</span></th>
+                  <th class="sort-th text-center py-3 px-3 font-medium text-zinc-400" data-key="lev" data-type="num">Leverage <span class="sort-icon">↕</span></th>
+                  <th class="sort-th text-center py-3 px-3 font-medium text-zinc-400" data-key="risk" data-type="num">Risk <span class="sort-icon">↕</span></th>
+                  <th class="sort-th text-center py-3 px-4 font-medium text-zinc-400" data-key="crisis" data-type="num">Crisis Index <span class="sort-icon">↕</span></th>
+                  <th class="sort-th text-center py-3 px-3 font-medium text-zinc-400" data-key="proj" data-type="num">Projected <span class="sort-icon">↕</span></th>
+                </tr>
+              </thead>
+              <tbody id="country-table" class="divide-y divide-white/[0.05]"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Radars -->
+        <div class="xl:col-span-4 card card-lg p-5">
+          <h3 class="font-semibold text-zinc-100 mb-1 flex items-center gap-2">
+            <span class="text-red-400 text-sm">●</span> Most Critical
+          </h3>
+          <p class="text-xs text-zinc-500 mb-4">Top 3 by crisis index</p>
+          <div id="top-radar" class="grid grid-cols-3 gap-3"></div>
+          <div class="mt-5 pt-4 border-t border-white/[0.06]">
+            <div class="text-xs text-zinc-500 mb-4">Escalation Triggers</div>
+            <div class="space-y-4">
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full shrink-0" style="background:#db2777"></span>
+                    <span class="text-xs text-zinc-200">Iraqi Militia Full Activation</span>
+                  </div>
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background:rgba(239,68,68,0.18);color:#f87171">IMMINENT</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div class="bar-fill" data-width="85" style="background:#db2777"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full shrink-0" style="background:#ef4444"></span>
+                    <span class="text-xs text-zinc-200">Direct US–Iran Engagement</span>
+                  </div>
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background:rgba(249,115,22,0.18);color:#fb923c">HIGH</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div class="bar-fill" data-width="65" style="background:#ef4444"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full shrink-0" style="background:#f97316"></span>
+                    <span class="text-xs text-zinc-200">Saudi Pipeline Sabotage</span>
+                  </div>
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,0.18);color:#fbbf24">MEDIUM</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div class="bar-fill" data-width="40" style="background:#f97316"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full shrink-0" style="background:#a855f7"></span>
+                    <span class="text-xs text-zinc-200">Iranian Nuclear Signaling</span>
+                  </div>
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background:rgba(168,85,247,0.18);color:#c084fc">LOW</span>
+                </div>
+                <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div class="bar-fill" data-width="18" style="background:#a855f7"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB: SCENARIOS ══════════════ -->
+  <div class="tab-panel" id="tab-scenarios">
+    <div class="tab-content-area pr-1">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <!-- Scenario bars -->
+        <div class="card card-lg p-6">
+          <h2 class="font-semibold text-zinc-100 mb-1">Escalation Scenarios</h2>
+          <p class="text-xs text-zinc-500 mb-6">Probability estimates over 1–3 month horizon</p>
+          <div id="scenario-bars" class="space-y-7"></div>
+          <div class="mt-8 pt-5 border-t border-white/[0.06] text-xs text-zinc-500">
+            Monte Carlo simulation (1,000 runs) · Scenarios are not mutually exclusive — probabilities reflect independent risk tracks.
+          </div>
+        </div>
+
+        <!-- Context cards -->
+        <div class="space-y-3">
+          <div class="card p-5">
+            <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">Current Dominant Scenario</div>
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.25);">
+                <span class="text-xl">⚓</span>
+              </div>
+              <div>
+                <div class="font-semibold text-amber-300 mb-1">Sustained Soft Closure — 65%</div>
+                <p class="text-xs text-zinc-400 leading-relaxed">IRGC harassment operations maintain de-facto blockade without full physical obstruction. Insurance risk zones deter commercial traffic. Gulf exporters unable to move volumes at scale.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">Highest Severity Risk</div>
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25);">
+                <span class="text-xl">☢</span>
+              </div>
+              <div>
+                <div class="font-semibold text-red-300 mb-1">Nuclear Threshold — 8%</div>
+                <p class="text-xs text-zinc-400 leading-relaxed">Conventional military defeat triggers Iranian leadership calculation shift. Low probability but existential consequence. Model assigns 8% independent pathway probability.</p>
+              </div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-3">Key Escalation Trigger</div>
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25);">
+                <span class="text-xl">🎯</span>
+              </div>
+              <div>
+                <div class="font-semibold text-purple-300 mb-1">Multi-Front Proxy Coordination</div>
+                <p class="text-xs text-zinc-400 leading-relaxed">Iraqi militia + Houthi simultaneous activation (currently at 58% combined) is the primary escalation vector. Iraqi multiplier effect ×3.0 makes it highest-risk proxy node.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ TAB: PROXIES ══════════════ -->
+  <div class="tab-panel" id="tab-proxies">
+    <div class="tab-content-area pr-1">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- Proxy arcs -->
+        <div class="lg:col-span-5 card card-lg p-6">
+          <h2 class="font-semibold text-zinc-100 mb-1">Proxy Activation Status</h2>
+          <p class="text-xs text-zinc-500 mb-6">Activation level × force multiplier = effective threat weight</p>
+          <div id="proxy-arcs" class="space-y-6"></div>
+        </div>
+
+        <!-- Influence network -->
+        <div class="lg:col-span-7 card card-lg p-6">
+          <h2 class="font-semibold text-zinc-100 mb-1">Influence Network</h2>
+          <p class="text-xs text-zinc-500 mb-5">Directed graph model — betweenness centrality scores</p>
+          <div id="network-viz" class="space-y-3"></div>
+          <div class="mt-6 pt-5 border-t border-white/[0.06]">
+            <div class="text-xs text-zinc-500 mb-3">Propagation Path</div>
+            <div class="flex items-center gap-2 flex-wrap text-xs">
+              <span class="px-2.5 py-1 rounded-full bg-red-950/60 border border-red-500/25 text-red-300">Iran (0.59)</span>
+              <span class="text-zinc-600">→</span>
+              <span class="px-2.5 py-1 rounded-full bg-purple-950/60 border border-purple-500/25 text-purple-300">Iraqi Militias (0.18)</span>
+              <span class="text-zinc-600">+</span>
+              <span class="px-2.5 py-1 rounded-full bg-purple-950/60 border border-purple-500/25 text-purple-300">Houthis</span>
+              <span class="text-zinc-600">→</span>
+              <span class="px-2.5 py-1 rounded-full bg-orange-950/60 border border-orange-500/25 text-orange-300">Gulf Exporters</span>
+              <span class="text-zinc-600">→</span>
+              <span class="px-2.5 py-1 rounded-full bg-amber-950/60 border border-amber-500/25 text-amber-300">Global Energy Shock</span>
+            </div>
+            <p class="text-xs text-zinc-500 mt-4 leading-relaxed">
+              Network analysis shows Iran as dominant hub with centrality 0.59 — nearly 2× the next-highest node (Saudi Arabia, 0.29).
+              Strong bidirectional ties between Saudi–UAE reflect coordination capacity.
+              Iraqi militia node (0.18) acts as primary force amplifier with highest multiplier effect (×3.0).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="mt-5 text-center text-[10px] text-zinc-600">
+    Mathematical model based on 5 analytic scales &nbsp;·&nbsp; Monte Carlo simulation (1,000 runs) &nbsp;·&nbsp; Data synthesized from crisis dynamics as of March 27, 2026 &nbsp;·&nbsp; For research and demonstration purposes only
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════
+const COUNTRIES = [
+  { name:"Qatar",       dep:10.0, sev:10.0, res:2.0, lev:3.0, risk:10.0, crisis:5.0, proj:5.72, group:"gulf" },
+  { name:"Kuwait",      dep:10.0, sev:10.0, res:2.0, lev:3.0, risk:10.0, crisis:5.0, proj:5.72, group:"gulf" },
+  { name:"Bahrain",     dep:10.0, sev:9.5,  res:2.0, lev:3.0, risk:10.0, crisis:4.9, proj:5.72, group:"gulf" },
+  { name:"Iraq",        dep:10.0, sev:9.5,  res:2.0, lev:3.5, risk:9.5,  crisis:4.7, proj:5.62, group:"gulf" },
+  { name:"UAE",         dep:9.5,  sev:9.0,  res:5.5, lev:5.5, risk:9.5,  crisis:3.4, proj:4.70, group:"gulf" },
+  { name:"Saudi Arabia",dep:9.0,  sev:9.0,  res:6.0, lev:6.0, risk:9.0,  crisis:3.0, proj:4.46, group:"gulf" },
+  { name:"Japan",       dep:9.0,  sev:7.0,  res:9.5, lev:5.0, risk:7.0,  crisis:1.7, proj:3.62, group:"asia" },
+  { name:"South Korea", dep:8.5,  sev:7.0,  res:9.0, lev:5.0, risk:7.0,  crisis:1.7, proj:3.62, group:"asia" },
+  { name:"Thailand",    dep:8.5,  sev:8.5,  res:3.5, lev:2.5, risk:9.0,  crisis:4.0, proj:5.56, group:"asia" },
+  { name:"Philippines", dep:8.5,  sev:8.5,  res:3.0, lev:2.5, risk:9.0,  crisis:4.1, proj:5.66, group:"asia" },
+  { name:"India",       dep:8.0,  sev:7.5,  res:5.0, lev:7.0, risk:7.5,  crisis:2.2, proj:4.12, group:"asia" },
+  { name:"Pakistan",    dep:7.5,  sev:8.0,  res:3.0, lev:4.0, risk:8.5,  crisis:3.4, proj:5.14, group:"asia" },
+  { name:"China",       dep:7.0,  sev:6.5,  res:7.5, lev:8.5, risk:6.5,  crisis:0.8, proj:2.72, group:"asia" }
+];
+
+const SCENARIOS = [
+  { name:"Sustained Soft Closure",   prob:65, color:"#f59e0b", desc:"IRGC harassment maintains de-facto blockade; commercial traffic deterred by war-risk insurance zones." },
+  { name:"Full Physical Blockade",   prob:30, color:"#f97316", desc:"Mines and naval assets physically obstruct strait; requires active military clearing operation." },
+  { name:"Multi-Front Regional War", prob:25, color:"#ef4444", desc:"Simultaneous proxy activation across Yemen, Lebanon, Iraq escalates beyond strait to regional conflict." },
+  { name:"Direct US–Iran Clash",     prob:20, color:"#b91c1c", desc:"US carrier group engages IRGC directly; risk of rapid escalation to conventional exchange." },
+  { name:"Nuclear Threshold",        prob:8,  color:"#7f1d1d", desc:"Conventional defeat triggers Iranian leadership nuclear calculation. Low probability; existential consequence." }
+];
+
+const PROXIES = [
+  { name:"Iraqi Militias",     act:0.70, mult:3.0, color:"#db2777", desc:"Highest activation — drone and rocket strikes on Gulf infrastructure." },
+  { name:"Houthis (Yemen)",    act:0.40, mult:2.5, color:"#a855f7", desc:"Maritime drone attacks; anti-ship missiles threatening Red Sea corridor." },
+  { name:"Hezbollah (Lebanon)",act:0.30, mult:1.8, color:"#c026d3", desc:"Northern front pressure; rocket capability held in reserve as deterrent." }
+];
+
+const NETWORK = [
+  { name:"Iran",             centrality:0.59, color:"#ef4444",  type:"state"  },
+  { name:"Saudi Arabia",     centrality:0.29, color:"#f97316",  type:"state"  },
+  { name:"UAE",              centrality:0.24, color:"#f59e0b",  type:"state"  },
+  { name:"US Naval Command", centrality:0.21, color:"#3b82f6",  type:"state"  },
+  { name:"Iraqi Militias",   centrality:0.18, color:"#db2777",  type:"proxy"  },
+  { name:"China",            centrality:0.16, color:"#22c55e",  type:"state"  },
+  { name:"Houthis",          centrality:0.12, color:"#a855f7",  type:"proxy"  },
+  { name:"Hezbollah",        centrality:0.09, color:"#c026d3",  type:"proxy"  }
+];
+
+const TIMELINE = [
+  { day:"Day 1",  date:"Mar 16", event:"IRGC naval vessels shadow US carrier group; first tanker diverts around Cape of Good Hope.", severity:"warning" },
+  { day:"Day 2",  date:"Mar 17", event:"Iranian state media announces 'defensive measures' in Hormuz Strait; Lloyd's of London activates war-risk exclusion zones.", severity:"warning" },
+  { day:"Day 3",  date:"Mar 18", event:"Qatar LNG terminal suspends loadings; spot gas prices spike 34% in Asian markets within hours.", severity:"critical" },
+  { day:"Day 4",  date:"Mar 19", event:"Iraqi militia drone strikes reported on Saudi Aramco pipeline infrastructure in Eastern Province.", severity:"critical" },
+  { day:"Day 5",  date:"Mar 20", event:"Japan announces activation of 90-day Strategic Petroleum Reserve (SPR); South Korea follows within 6 hours.", severity:"warning" },
+  { day:"Day 6",  date:"Mar 21", event:"UN Security Council emergency session convened; Russia and China veto US-backed resolution.", severity:"info" },
+  { day:"Day 7",  date:"Mar 22", event:"Saudi Arabia announces accelerated East–West pipeline capacity; can reroute ~4.5 mbd through Red Sea.", severity:"info" },
+  { day:"Day 8",  date:"Mar 23", event:"Houthi anti-ship missile strikes merchant vessel 80nm south of Hormuz; crew evacuated.", severity:"critical" },
+  { day:"Day 9",  date:"Mar 24", event:"China deploys naval escort task force; announces bilateral energy guarantee talks with Iran.", severity:"warning" },
+  { day:"Day 10", date:"Mar 25", event:"India activates emergency crude import diversification — West Africa and US Gulf Coast volumes contracted.", severity:"info" },
+  { day:"Day 11", date:"Mar 26", event:"Bahrain requests US military force protection; USS Eisenhower carrier strike group repositioned.", severity:"critical" },
+  { day:"Day 12", date:"Mar 27", event:"Current: 95% traffic blockage confirmed. Crisis index reaches 4.12/5. G7 emergency energy coordination call.", severity:"critical" }
+];
+
+const OIL_LABELS = [
+  "Feb 1","Feb 8","Feb 15","Feb 22","Mar 1","Mar 8","Mar 15","Mar 16",
+  "Mar 17","Mar 18","Mar 19","Mar 20","Mar 21","Mar 22","Mar 23","Mar 24","Mar 25","Mar 26","Mar 27 (now)",
+  "+2wk","+1mo","+2mo","+3mo"
+];
+const OIL_ACTUAL = [
+  78.2, 79.1, 80.4, 81.0, 82.3, 84.5, 86.8, 88.2,
+  95.4, 101.3, 106.8, 109.2, 111.4, 112.0, 114.8, 115.9, 116.7, 117.6, 118.4,
+  null, null, null, null
+];
+const OIL_PROJ_MID = [
+  null, null, null, null, null, null, null, null,
+  null, null, null, null, null, null, null, null, null, null, 118.4,
+  121, 126, 132, 138
+];
+const OIL_PROJ_HIGH = [
+  null, null, null, null, null, null, null, null,
+  null, null, null, null, null, null, null, null, null, null, 118.4,
+  125, 134, 142, 155
+];
+const OIL_PROJ_LOW = [
+  null, null, null, null, null, null, null, null,
+  null, null, null, null, null, null, null, null, null, null, 118.4,
+  116, 112, 105, 98
+];
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+const tabInitialized = {};
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const panel = document.getElementById('tab-' + btn.dataset.tab);
+    panel.classList.add('active');
+    if (!tabInitialized[btn.dataset.tab]) {
+      tabInitialized[btn.dataset.tab] = true;
+      initTab(btn.dataset.tab);
+    }
+  });
+});
+
+function initTab(name) {
+  if (name === 'countries') { renderTable('all'); renderTopRadars(); updateSortHeaders(); animateBars(); }
+  if (name === 'scenarios') { renderScenarioBars(); animateBars(); }
+  if (name === 'proxies')   { renderProxies(); renderNetwork(); }
+}
+
+// ══════════════════════════════════════════════
+//  COUNT-UP ANIMATION
+// ══════════════════════════════════════════════
+function animateCountUp() {
+  document.querySelectorAll('.count-up').forEach(el => {
+    const target = parseFloat(el.dataset.target);
+    const decimals = parseInt(el.dataset.decimals || '0');
+    const duration = 1200;
+    const start = performance.now();
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = (target * ease).toFixed(decimals);
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = target.toFixed(decimals);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+function animateBars() {
+  setTimeout(() => {
+    document.querySelectorAll('.bar-fill[data-width]').forEach(el => {
+      el.style.width = el.dataset.width + '%';
+    });
+  }, 50);
+}
+
+// ══════════════════════════════════════════════
+//  OIL CHART
+// ══════════════════════════════════════════════
+function renderOilChart() {
+  const ctx = document.getElementById('oil-chart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: OIL_LABELS,
+      datasets: [
+        {
+          label: 'Actual',
+          data: OIL_ACTUAL,
+          borderColor: '#f59e0b',
+          borderWidth: 2,
+          pointRadius: (ctx) => ctx.dataIndex === 18 ? 5 : 0,
+          pointBackgroundColor: '#f59e0b',
+          fill: false,
+          tension: 0.4,
+          spanGaps: false
+        },
+        {
+          label: 'Proj (Mid)',
+          data: OIL_PROJ_MID,
+          borderColor: '#f87171',
+          borderWidth: 1.5,
+          borderDash: [4,4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+          spanGaps: false
+        },
+        {
+          label: 'Proj (High)',
+          data: OIL_PROJ_HIGH,
+          borderColor: 'rgba(248,113,113,0.35)',
+          borderWidth: 1,
+          borderDash: [2,4],
+          pointRadius: 0,
+          fill: '+1',
+          backgroundColor: 'rgba(239,68,68,0.07)',
+          tension: 0.4,
+          spanGaps: false
+        },
+        {
+          label: 'Proj (Low)',
+          data: OIL_PROJ_LOW,
+          borderColor: 'rgba(248,113,113,0.35)',
+          borderWidth: 1,
+          borderDash: [2,4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+          spanGaps: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#18181b',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#a1a1aa',
+          bodyColor: '#f4f4f5',
+          callbacks: {
+            label: ctx => ctx.raw != null ? ` $${ctx.raw.toFixed(1)}` : null
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#52525b', font: { size: 10 }, maxRotation: 0, maxTicksLimit: 10 }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#52525b', font: { size: 10 }, callback: v => '$' + v },
+          min: 70, max: 160
+        }
+      },
+      animation: { duration: 1200, easing: 'easeOutQuart' }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  TIMELINE
+// ══════════════════════════════════════════════
+function renderTimeline() {
+  const feed = document.getElementById('timeline-feed');
+  const colors = { critical: '#ef4444', warning: '#f59e0b', info: '#3b82f6' };
+  const labels = { critical: 'CRITICAL', warning: 'WARNING', info: 'UPDATE' };
+  TIMELINE.slice().reverse().forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'flex gap-3';
+    div.style.opacity = '0';
+    div.style.transform = 'translateY(8px)';
+    div.style.transition = `opacity 0.4s ease ${i * 60}ms, transform 0.4s ease ${i * 60}ms`;
+    div.innerHTML = `
+      <div class="shrink-0 pt-0.5">
+        <div class="w-2 h-2 rounded-full mt-1" style="background:${colors[item.severity]}"></div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="text-[10px] font-mono font-bold text-zinc-400">${item.day}</span>
+          <span class="text-[10px] text-zinc-600">${item.date}</span>
+          <span class="text-[9px] font-semibold tracking-widest px-1.5 py-0.5 rounded" style="color:${colors[item.severity]};background:${colors[item.severity]}18;">${labels[item.severity]}</span>
+        </div>
+        <p class="text-xs text-zinc-300 leading-relaxed">${item.event}</p>
+      </div>`;
+    feed.appendChild(div);
+    setTimeout(() => { div.style.opacity = '1'; div.style.transform = 'none'; }, 300 + i * 60);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  TABLE
+// ══════════════════════════════════════════════
+function idxClass(v) {
+  if (v >= 4)   return 'idx-crit';
+  if (v >= 2.5) return 'idx-high';
+  if (v >= 1.5) return 'idx-mid';
+  return 'idx-low';
+}
+function idxBarColor(v) {
+  if (v >= 4)   return '#f87171';
+  if (v >= 2.5) return '#fb923c';
+  if (v >= 1.5) return '#fbbf24';
+  return '#34d399';
+}
+
+// Sort state
+let tableSort = { key: 'crisis', dir: 'desc' };
+let tableFilter = 'all';
+
+function getSortedList() {
+  let list = tableFilter === 'all' ? [...COUNTRIES] : COUNTRIES.filter(c => c.group === tableFilter);
+  const { key, dir } = tableSort;
+  list.sort((a, b) => {
+    const av = key === 'name' ? a[key] : a[key];
+    const bv = key === 'name' ? b[key] : b[key];
+    if (typeof av === 'string') {
+      return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    return dir === 'asc' ? av - bv : bv - av;
+  });
+  return list;
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('.sort-th').forEach(th => {
+    th.classList.remove('asc', 'desc');
+    const icon = th.querySelector('.sort-icon');
+    if (th.dataset.key === tableSort.key) {
+      th.classList.add(tableSort.dir);
+      icon.textContent = tableSort.dir === 'asc' ? '↑' : '↓';
+    } else {
+      icon.textContent = '↕';
+    }
+  });
+}
+
+function renderTable(filter) {
+  if (filter !== undefined) tableFilter = filter;
+  const tbody = document.getElementById('country-table');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  getSortedList().forEach(c => {
+    const barW = c.crisis * 20;
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-white/[0.02] transition-colors';
+    tr.innerHTML = `
+      <td class="py-3.5 px-5 font-medium text-sm">
+        <div class="flex items-center gap-2">
+          <span class="text-[9px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide" style="background:${c.group==='gulf'?'rgba(249,115,22,0.15)':'rgba(59,130,246,0.15)'};color:${c.group==='gulf'?'#fb923c':'#60a5fa'}">${c.group==='gulf'?'GCC':'ASIA'}</span>
+          ${c.name}
+        </div>
+      </td>
+      <td class="text-center py-3.5 px-3"><span class="font-mono text-xs text-zinc-300">${c.dep}</span></td>
+      <td class="text-center py-3.5 px-3"><span class="font-mono text-xs text-zinc-300">${c.sev}</span></td>
+      <td class="text-center py-3.5 px-3"><span class="font-mono text-xs text-zinc-300">${c.res}</span></td>
+      <td class="text-center py-3.5 px-3"><span class="font-mono text-xs text-zinc-300">${c.lev}</span></td>
+      <td class="text-center py-3.5 px-3"><span class="font-mono text-xs text-zinc-300">${c.risk}</span></td>
+      <td class="text-center py-3.5 px-4">
+        <div class="flex items-center gap-2 justify-center">
+          <div class="w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div class="bar-fill" data-width="${barW}" style="background:${idxBarColor(c.crisis)}"></div>
+          </div>
+          <span class="font-mono text-sm font-semibold ${idxClass(c.crisis)}">${c.crisis.toFixed(1)}</span>
+        </div>
+      </td>
+      <td class="text-center py-3.5 px-3 font-mono text-xs text-red-400">↑ ${c.proj.toFixed(1)}</td>`;
+    tbody.appendChild(tr);
+  });
+  setTimeout(animateBars, 80);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('group-filter');
+  if (sel) sel.addEventListener('change', e => renderTable(e.target.value));
+
+  // Sort header clicks — delegated so it works after tab switch
+  document.addEventListener('click', e => {
+    const th = e.target.closest('.sort-th');
+    if (!th) return;
+    const key = th.dataset.key;
+    if (!key) return;
+    if (tableSort.key === key) {
+      tableSort.dir = tableSort.dir === 'desc' ? 'asc' : 'desc';
+    } else {
+      tableSort.key = key;
+      tableSort.dir = key === 'name' ? 'asc' : 'desc';
+    }
+    updateSortHeaders();
+    renderTable();
+  });
+});
+
+// ══════════════════════════════════════════════
+//  RADAR CHARTS
+// ══════════════════════════════════════════════
+function createRadar(country, container) {
+  const wrap = document.createElement('div');
+  wrap.className = 'text-center';
+  const id = 'r-' + country.name.replace(/\s+/g, '');
+  wrap.innerHTML = `
+    <div class="text-[10px] font-medium text-zinc-300 mb-1 truncate">${country.name}</div>
+    <canvas id="${id}" width="120" height="120"></canvas>
+    <div class="mt-1 font-mono text-sm font-semibold ${idxClass(country.crisis)}">${country.crisis.toFixed(1)}</div>`;
+  container.appendChild(wrap);
+  setTimeout(() => {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['Dep','Sev','Res','Lev','Risk'],
+        datasets: [{
+          data: [country.dep, country.sev, country.res, country.lev, country.risk],
+          backgroundColor: 'rgba(248,113,113,0.15)',
+          borderColor: '#f87171',
+          borderWidth: 1.5,
+          pointBackgroundColor: '#f87171',
+          pointRadius: 2
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { r: {
+          min: 0, max: 10,
+          grid: { color: 'rgba(255,255,255,0.07)' },
+          angleLines: { color: 'rgba(255,255,255,0.07)' },
+          ticks: { display: false },
+          pointLabels: { color: '#71717a', font: { size: 9 } }
+        }},
+        animation: { duration: 800 }
+      }
+    });
+  }, 80);
+}
+
+function renderTopRadars() {
+  const container = document.getElementById('top-radar');
+  if (!container) return;
+  container.innerHTML = '';
+  [...COUNTRIES].sort((a,b) => b.crisis - a.crisis).slice(0,3).forEach(c => createRadar(c, container));
+}
+
+// ══════════════════════════════════════════════
+//  SCENARIO BARS
+// ══════════════════════════════════════════════
+function renderScenarioBars() {
+  const container = document.getElementById('scenario-bars');
+  if (!container) return;
+  container.innerHTML = '';
+  SCENARIOS.forEach(sc => {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium text-zinc-100">${sc.name}</span>
+        <span class="font-mono text-sm font-bold" style="color:${sc.color}">${sc.prob}%</span>
+      </div>
+      <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden mb-1.5">
+        <div class="bar-fill" data-width="${sc.prob}" style="background:${sc.color};opacity:0.85"></div>
+      </div>
+      <p class="text-xs text-zinc-500 leading-relaxed">${sc.desc}</p>`;
+    container.appendChild(div);
+  });
+  setTimeout(animateBars, 80);
+}
+
+// ══════════════════════════════════════════════
+//  PROXY ARCS
+// ══════════════════════════════════════════════
+function renderProxies() {
+  const container = document.getElementById('proxy-arcs');
+  if (!container) return;
+  container.innerHTML = '';
+  PROXIES.forEach(p => {
+    const pct = Math.round(p.act * 100);
+    const R = 38, circ = 2 * Math.PI * R;
+    const offset = circ * (1 - p.act);
+    const div = document.createElement('div');
+    div.className = 'card p-4 flex items-center gap-5';
+    div.innerHTML = `
+      <div class="shrink-0 relative">
+        <svg width="92" height="92" viewBox="0 0 92 92">
+          <circle class="arc-track" cx="46" cy="46" r="${R}" stroke-width="6"/>
+          <circle class="arc-fill" cx="46" cy="46" r="${R}" stroke-width="6"
+            stroke="${p.color}" stroke-dasharray="${circ}"
+            stroke-dashoffset="${circ}" id="arc-${p.name.replace(/\s+/g,'')}"
+            transform="rotate(-90 46 46)"/>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <span class="font-mono font-bold text-lg" style="color:${p.color}">${pct}%</span>
+        </div>
+      </div>
+      <div class="flex-1">
+        <div class="font-semibold text-zinc-100 mb-0.5">${p.name}</div>
+        <div class="text-xs text-zinc-500 mb-2">${p.desc}</div>
+        <div class="flex items-center gap-3 text-xs">
+          <span class="text-zinc-400">Multiplier</span>
+          <span class="font-mono font-bold px-2 py-0.5 rounded" style="background:${p.color}20;color:${p.color}">×${p.mult}</span>
+          <span class="text-zinc-400">Threat weight</span>
+          <span class="font-mono font-bold" style="color:${p.color}">${(p.act * p.mult).toFixed(2)}</span>
+        </div>
+      </div>`;
+    container.appendChild(div);
+    // Animate arc
+    setTimeout(() => {
+      const arc = document.getElementById('arc-' + p.name.replace(/\s+/g,''));
+      if (arc) arc.style.strokeDashoffset = offset;
+    }, 200);
+  });
+}
+
+// ══════════════════════════════════════════════
+//  INFLUENCE NETWORK
+// ══════════════════════════════════════════════
+function renderNetwork() {
+  const container = document.getElementById('network-viz');
+  if (!container) return;
+  container.innerHTML = '';
+  const max = NETWORK[0].centrality;
+  NETWORK.forEach(n => {
+    const pct = (n.centrality / max) * 100;
+    const typeLabel = n.type === 'proxy' ? 'PROXY' : 'STATE';
+    const typeBg   = n.type === 'proxy' ? 'rgba(168,85,247,0.15)' : 'rgba(100,116,139,0.15)';
+    const typeClr  = n.type === 'proxy' ? '#c084fc' : '#94a3b8';
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-3';
+    div.innerHTML = `
+      <span class="text-[9px] font-semibold w-10 text-center shrink-0 py-0.5 rounded" style="background:${typeBg};color:${typeClr}">${typeLabel}</span>
+      <span class="text-sm text-zinc-200 w-36 shrink-0">${n.name}</span>
+      <div class="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
+        <div class="bar-fill" data-width="${pct}" style="background:${n.color}"></div>
+      </div>
+      <span class="font-mono text-xs text-zinc-400 w-10 text-right shrink-0">${n.centrality.toFixed(2)}</span>`;
+    container.appendChild(div);
+  });
+  setTimeout(animateBars, 80);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  tabInitialized['overview'] = true;
+  animateCountUp();
+  renderOilChart();
+  renderTimeline();
+});
+</script>
+</body>
+</html>
