@@ -828,8 +828,15 @@ function renderCards(filter) {
         </div>
         <span class="font-mono text-lg font-bold ${idxClass(c.crisis)}">${c.crisis.toFixed(1)}</span>
       </div>
-      <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-2">
+      <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-3">
         <div class="bar-fill" data-width="${barW}" style="background:${idxBarColor(c.crisis)}"></div>
+      </div>
+      <div class="grid grid-cols-5 gap-1 mb-3">
+        ${[['Dep',c.dep],['Sev',c.sev],['Res',c.res],['Lev',c.lev],['Risk',c.risk]].map(([label,val]) => `
+          <div class="text-center rounded-lg py-1.5" style="background:rgba(255,255,255,0.04)">
+            <div class="text-[9px] text-zinc-500 mb-0.5">${label}</div>
+            <div class="font-mono text-xs font-semibold text-zinc-200">${val}</div>
+          </div>`).join('')}
       </div>
       <div class="flex items-center justify-between text-[11px]">
         <span class="text-zinc-500">Crisis Index</span>
