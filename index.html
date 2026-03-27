@@ -133,22 +133,71 @@
     .sort-th.asc  .sort-icon { opacity: 1; }
     .sort-th.desc .sort-icon { opacity: 1; }
 
-    /* ── Mobile responsive tweaks ── */
+    /* ══════════════════════════════════════
+       MOBILE OVERRIDES  (≤ 640px)
+    ══════════════════════════════════════ */
     @media (max-width: 640px) {
-      .header-nums  { flex-direction: row; gap: 20px; }
-      /* Keep table scrollable on mobile */
-      .overflow-x-auto { -webkit-overflow-scrolling: touch; }
-      /* Tighten table padding on mobile */
-      .sort-th, td { padding-left: 8px !important; padding-right: 8px !important; }
+
+      /* Container padding */
+      .mobile-px { padding-left: 16px !important; padding-right: 16px !important; }
+
+      /* Header: stack numbers below title */
+      .header-nums {
+        flex-direction: row;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .header-nums > div .text-2xl { font-size: 1.25rem !important; }
+
+      /* Tabs: tighter padding so all 4 fit on one line */
+      .tab-btn { padding: 8px 12px; font-size: 0.72rem; }
+
+      /* Metric cards: tighter padding + smaller numbers */
+      .metric-card { padding: 12px !important; }
+      .metric-card .text-4xl { font-size: 1.75rem !important; }
+
+      /* Oil chart: shorter height */
+      .oil-chart-wrap { height: 180px !important; }
+
+      /* Timeline: shorter max-height */
+      #timeline-feed { max-height: 220px !important; }
+
+      /* Countries tab: hide table, show cards */
+      .country-table-wrap { display: none !important; }
+      #country-cards { display: block !important; }
+
+      /* Radar grid: single column */
+      #top-radar { grid-template-columns: 1fr !important; }
+      #top-radar > div { display: flex; align-items: center; gap: 12px; }
+      #top-radar > div canvas { width: 90px !important; height: 90px !important; flex-shrink: 0; }
+      #top-radar > div .text-\[10px\] { margin-bottom: 0; width: 70px; }
+
+      /* Proxy arcs: stack SVG above text */
+      #proxy-arcs .card { flex-direction: column; align-items: center; text-align: center; gap: 12px; }
+      #proxy-arcs .card .flex-1 { width: 100%; }
+      #proxy-arcs .card .flex.items-center.gap-3 { justify-content: center; }
+
+      /* Network rows: shrink name column */
+      .network-name { width: 80px !important; font-size: 0.75rem; }
+
+      /* Scenario bar label row: allow wrapping */
+      .scenario-label-row { flex-wrap: wrap; gap: 4px; }
+
+      /* Footer: smaller and centered */
+      .footer-text { font-size: 9px; line-height: 1.6; }
     }
-    @media (max-width: 768px) {
-      /* Proxies arc cards stack better */
-      #proxy-arcs .card { flex-direction: column; align-items: center; text-align: center; }
+
+    /* Desktop: always hide the card list view */
+    @media (min-width: 641px) {
+      #country-cards { display: none !important; }
     }
+
+    /* country-cards base (mobile shows it) */
+    #country-cards { display: none; }
   </style>
 </head>
 <body>
-<div class="relative z-10 max-w-screen-2xl mx-auto px-6 py-5">
+<div class="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 py-5">
 
   <!-- ══════════════ HEADER ══════════════ -->
   <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
@@ -193,7 +242,7 @@
 
       <!-- Key metrics -->
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5 pb-1">
-        <div class="card p-4">
+        <div class="card p-4 metric-card">
           <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Avg Crisis Index</div>
           <div class="text-4xl font-mono font-bold text-red-400"><span class="count-up" data-target="4.12" data-decimals="2">0.00</span></div>
           <div class="text-xs text-orange-400 mt-2">↑ +0.68 projected</div>
@@ -234,7 +283,7 @@
               <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-red-400 inline-block rounded border-dashed" style="border-top:1.5px dashed #f87171;background:none"></span>Projected</span>
             </div>
           </div>
-          <div style="height: 260px; position: relative;">
+          <div class="oil-chart-wrap" style="height: 260px; position: relative;">
             <canvas id="oil-chart"></canvas>
           </div>
         </div>
@@ -263,7 +312,7 @@
               <option value="asia">Asian Importers</option>
             </select>
           </div>
-          <div class="overflow-x-auto">
+          <div class="country-table-wrap overflow-x-auto">
             <table class="w-full text-xs">
               <thead>
                 <tr class="bg-zinc-950/70">
@@ -280,6 +329,7 @@
               <tbody id="country-table" class="divide-y divide-white/[0.05]"></tbody>
             </table>
           </div>
+          <div id="country-cards" class="p-3 space-y-2"></div>
         </div>
 
         <!-- Radars -->
@@ -447,7 +497,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="mt-5 text-center text-[10px] text-zinc-600">
+  <div class="footer-text mt-5 text-center text-[10px] text-zinc-600">
     Mathematical model based on 5 analytic scales &nbsp;·&nbsp; Monte Carlo simulation (1,000 runs) &nbsp;·&nbsp; Data synthesized from crisis dynamics as of March 27, 2026 &nbsp;·&nbsp; For research and demonstration purposes only
   </div>
 </div>
@@ -558,7 +608,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 function initTab(name) {
-  if (name === 'countries') { renderTable('all'); renderTopRadars(); updateSortHeaders(); animateBars(); }
+  if (name === 'countries') { renderTable('all'); renderCards(); renderTopRadars(); updateSortHeaders(); animateBars(); }
   if (name === 'scenarios') { renderScenarioBars(); animateBars(); }
   if (name === 'proxies')   { renderProxies(); renderNetwork(); }
 }
@@ -759,6 +809,37 @@ function updateSortHeaders() {
   });
 }
 
+function renderCards(filter) {
+  if (filter !== undefined) tableFilter = filter;
+  const container = document.getElementById('country-cards');
+  if (!container) return;
+  container.innerHTML = '';
+  getSortedList().forEach(c => {
+    const barW = c.crisis * 20;
+    const isGulf = c.group === 'gulf';
+    const card = document.createElement('div');
+    card.className = 'card p-3';
+    card.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-[9px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wide"
+            style="background:${isGulf?'rgba(249,115,22,0.15)':'rgba(59,130,246,0.15)'};color:${isGulf?'#fb923c':'#60a5fa'}">${isGulf?'GCC':'ASIA'}</span>
+          <span class="font-semibold text-sm text-zinc-100">${c.name}</span>
+        </div>
+        <span class="font-mono text-lg font-bold ${idxClass(c.crisis)}">${c.crisis.toFixed(1)}</span>
+      </div>
+      <div class="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-2">
+        <div class="bar-fill" data-width="${barW}" style="background:${idxBarColor(c.crisis)}"></div>
+      </div>
+      <div class="flex items-center justify-between text-[11px]">
+        <span class="text-zinc-500">Crisis Index</span>
+        <span class="text-red-400 font-mono">Projected ↑ ${c.proj.toFixed(1)}</span>
+      </div>`;
+    container.appendChild(card);
+  });
+  setTimeout(animateBars, 80);
+}
+
 function renderTable(filter) {
   if (filter !== undefined) tableFilter = filter;
   const tbody = document.getElementById('country-table');
@@ -796,7 +877,7 @@ function renderTable(filter) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const sel = document.getElementById('group-filter');
-  if (sel) sel.addEventListener('change', e => renderTable(e.target.value));
+  if (sel) sel.addEventListener('change', e => { renderTable(e.target.value); renderCards(e.target.value); });
 
   // Sort header clicks — delegated so it works after tab switch
   document.addEventListener('click', e => {
@@ -812,6 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateSortHeaders();
     renderTable();
+    renderCards();
   });
 });
 
@@ -875,9 +957,9 @@ function renderScenarioBars() {
   SCENARIOS.forEach(sc => {
     const div = document.createElement('div');
     div.innerHTML = `
-      <div class="flex items-center justify-between mb-2">
+      <div class="scenario-label-row flex items-center justify-between mb-2">
         <span class="text-sm font-medium text-zinc-100">${sc.name}</span>
-        <span class="font-mono text-sm font-bold" style="color:${sc.color}">${sc.prob}%</span>
+        <span class="font-mono text-sm font-bold shrink-0" style="color:${sc.color}">${sc.prob}%</span>
       </div>
       <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden mb-1.5">
         <div class="bar-fill" data-width="${sc.prob}" style="background:${sc.color};opacity:0.85"></div>
@@ -950,7 +1032,7 @@ function renderNetwork() {
     div.className = 'flex items-center gap-3';
     div.innerHTML = `
       <span class="text-[9px] font-semibold w-10 text-center shrink-0 py-0.5 rounded" style="background:${typeBg};color:${typeClr}">${typeLabel}</span>
-      <span class="text-sm text-zinc-200 w-36 shrink-0">${n.name}</span>
+      <span class="text-sm text-zinc-200 w-36 shrink-0 network-name">${n.name}</span>
       <div class="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
         <div class="bar-fill" data-width="${pct}" style="background:${n.color}"></div>
       </div>
