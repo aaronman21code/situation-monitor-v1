@@ -241,8 +241,8 @@
       </div>
       <div class="text-right">
         <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-0.5">Avg Crisis Index</div>
-        <div class="text-2xl sm:text-3xl font-mono font-bold text-red-400"><span id="hdr-idx">6.95</span><span class="text-base text-zinc-500">/10</span></div>
-        <div class="text-xs text-orange-400 font-medium">Gulf avg 8.0 · Asia avg 5.7</div>
+        <div class="text-2xl sm:text-3xl font-mono font-bold text-red-400"><span id="hdr-idx">6.05</span><span class="text-base text-zinc-500">/10</span></div>
+        <div class="text-xs text-orange-400 font-medium">Gulf avg 7.25 · Asia avg 4.85</div>
       </div>
     </div>
   </header>
@@ -263,8 +263,8 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5 pb-1">
         <div class="card p-4 metric-card">
           <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Avg Crisis Index</div>
-          <div class="text-4xl font-mono font-bold text-red-400"><span class="count-up" data-target="6.95" data-decimals="2">0.00</span><span class="text-base text-zinc-500">/10</span></div>
-          <div class="text-xs text-orange-400 mt-2">Gulf 8.0 · Asia 5.7</div>
+          <div class="text-4xl font-mono font-bold text-red-400"><span class="count-up" data-target="6.05" data-decimals="2">0.00</span><span class="text-base text-zinc-500">/10</span></div>
+          <div class="text-xs text-orange-400 mt-2">Gulf 7.25 · Asia 4.85</div>
         </div>
         <div class="card p-4">
           <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Gulf Exporters</div>
@@ -526,19 +526,19 @@
 //  DATA
 // ══════════════════════════════════════════════
 const COUNTRIES = [
-  { name:"Qatar",       dep:10.0, sev:10.0, res:2.0, lev:3.0, risk:10.0, crisis:9.0, proj:9.4, group:"gulf" },
-  { name:"Kuwait",      dep:10.0, sev:10.0, res:2.0, lev:3.0, risk:10.0, crisis:9.0, proj:9.4, group:"gulf" },
-  { name:"Bahrain",     dep:10.0, sev:9.5,  res:2.0, lev:3.0, risk:10.0, crisis:8.9, proj:9.3, group:"gulf" },
-  { name:"Iraq",        dep:10.0, sev:9.5,  res:2.0, lev:3.5, risk:9.5,  crisis:8.7, proj:9.1, group:"gulf" },
-  { name:"UAE",         dep:9.5,  sev:9.0,  res:5.5, lev:5.5, risk:9.5,  crisis:7.4, proj:8.1, group:"gulf" },
-  { name:"Saudi Arabia",dep:9.0,  sev:9.0,  res:6.0, lev:6.0, risk:9.0,  crisis:7.0, proj:7.8, group:"gulf" },
-  { name:"Japan",       dep:9.0,  sev:7.0,  res:9.5, lev:5.0, risk:7.0,  crisis:4.5, proj:5.3, group:"asia" },
-  { name:"South Korea", dep:8.5,  sev:7.0,  res:9.0, lev:5.0, risk:7.0,  crisis:4.5, proj:5.3, group:"asia" },
-  { name:"Thailand",    dep:8.5,  sev:8.5,  res:3.5, lev:2.5, risk:9.0,  crisis:8.0, proj:8.7, group:"asia" },
-  { name:"Philippines", dep:8.5,  sev:8.5,  res:3.0, lev:2.5, risk:9.0,  crisis:8.1, proj:8.8, group:"asia" },
-  { name:"India",       dep:8.0,  sev:7.5,  res:5.0, lev:7.0, risk:7.5,  crisis:5.6, proj:6.4, group:"asia" },
-  { name:"Pakistan",    dep:7.5,  sev:8.0,  res:3.0, lev:4.0, risk:8.5,  crisis:7.4, proj:8.1, group:"asia" },
-  { name:"China",       dep:7.0,  sev:6.5,  res:7.5, lev:8.5, risk:6.5,  crisis:3.8, proj:4.6, group:"asia" }
+  { name:"Qatar",       dep:10.0, sev:9.0, res:2.0, lev:3.0, risk:9.5,  crisis:8.2, proj:8.7, group:"gulf" },
+  { name:"Kuwait",      dep:10.0, sev:9.0, res:2.0, lev:3.0, risk:9.5,  crisis:8.2, proj:8.7, group:"gulf" },
+  { name:"Bahrain",     dep:10.0, sev:8.5, res:2.0, lev:3.0, risk:9.5,  crisis:8.0, proj:8.5, group:"gulf" },
+  { name:"Iraq",        dep:10.0, sev:8.5, res:2.0, lev:3.5, risk:9.0,  crisis:7.8, proj:8.3, group:"gulf" },
+  { name:"UAE",         dep:9.5,  sev:8.0, res:5.5, lev:5.5, risk:9.0,  crisis:6.9, proj:7.6, group:"gulf" },
+  { name:"Saudi Arabia",dep:9.0,  sev:7.5, res:6.0, lev:6.0, risk:8.5,  crisis:6.4, proj:7.1, group:"gulf" },
+  { name:"Japan",       dep:9.0,  sev:5.5, res:9.5, lev:5.0, risk:6.5,  crisis:3.9, proj:4.7, group:"asia" },
+  { name:"South Korea", dep:8.5,  sev:5.5, res:9.0, lev:5.0, risk:6.5,  crisis:3.9, proj:4.7, group:"asia" },
+  { name:"Thailand",    dep:8.5,  sev:7.0, res:3.5, lev:2.5, risk:8.5,  crisis:7.0, proj:7.8, group:"asia" },
+  { name:"Philippines", dep:8.5,  sev:7.0, res:3.0, lev:2.5, risk:8.5,  crisis:7.1, proj:7.9, group:"asia" },
+  { name:"India",       dep:8.0,  sev:6.0, res:5.0, lev:7.0, risk:7.0,  crisis:4.8, proj:5.6, group:"asia" },
+  { name:"Pakistan",    dep:7.5,  sev:6.5, res:3.0, lev:4.0, risk:8.0,  crisis:6.4, proj:7.1, group:"asia" },
+  { name:"China",       dep:7.0,  sev:5.0, res:7.5, lev:8.5, risk:6.0,  crisis:3.2, proj:4.0, group:"asia" }
 ];
 
 const SCENARIOS = [
