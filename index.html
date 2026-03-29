@@ -101,11 +101,11 @@
       transition: width 1s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
-    /* ── Crisis index color ── */
-    .idx-crit { color: #f87171; }
-    .idx-high  { color: #fb923c; }
-    .idx-mid   { color: #fbbf24; }
-    .idx-low   { color: #34d399; }
+    /* ── Crisis index color (0–10 scale) ── */
+    .idx-crit { color: #f87171; }   /* ≥ 8.0  critical  */
+    .idx-high { color: #fb923c; }   /* ≥ 6.0  high      */
+    .idx-mid  { color: #fbbf24; }   /* ≥ 4.0  elevated  */
+    .idx-low  { color: #34d399; }   /* < 4.0  moderate  */
 
     /* ── Pulse dot ── */
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
@@ -787,15 +787,15 @@ function renderTimeline() {
 //  TABLE
 // ══════════════════════════════════════════════
 function idxClass(v) {
-  if (v >= 4)   return 'idx-crit';
-  if (v >= 2.5) return 'idx-high';
-  if (v >= 1.5) return 'idx-mid';
+  if (v >= 8.0) return 'idx-crit';
+  if (v >= 6.0) return 'idx-high';
+  if (v >= 4.0) return 'idx-mid';
   return 'idx-low';
 }
 function idxBarColor(v) {
-  if (v >= 4)   return '#f87171';
-  if (v >= 2.5) return '#fb923c';
-  if (v >= 1.5) return '#fbbf24';
+  if (v >= 8.0) return '#f87171';
+  if (v >= 6.0) return '#fb923c';
+  if (v >= 4.0) return '#fbbf24';
   return '#34d399';
 }
 
@@ -836,7 +836,7 @@ function renderCards(filter) {
   if (!container) return;
   container.innerHTML = '';
   getSortedList().forEach(c => {
-    const barW = c.crisis * 20;
+    const barW = c.crisis * 10;
     const isGulf = c.group === 'gulf';
     const card = document.createElement('div');
     card.className = 'card p-3';
@@ -874,7 +874,7 @@ function renderTable(filter) {
   if (!tbody) return;
   tbody.innerHTML = '';
   getSortedList().forEach(c => {
-    const barW = c.crisis * 20;
+    const barW = c.crisis * 10;
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-white/[0.02] transition-colors';
     tr.innerHTML = `
